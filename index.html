@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fusion of Cryptographic Paradigms</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google Font: Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      background-color: #0a0a0a;
+      color: #a3c4f9;
+      font-family: 'Poppins', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    h1 {
+      font-size: 3.5em;
+      margin-bottom: 20px;
+      font-weight: 700;
+      z-index: 1;
+    }
+
+    .logo {
+      max-width: 300px;
+      height: auto;
+      margin-bottom: 30px;
+      z-index: 1;
+    }
+
+    .nav-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
+      z-index: 1;
+    }
+
+    .nav-buttons a {
+      text-decoration: none;
+      color: #a3c4f9;
+      background-color: transparent;
+      padding: 12px 24px;
+      border: 2px solid #a3c4f9;
+      border-radius: 6px;
+      font-size: 1.2em;
+      transition: transform 0.2s ease, background-color 0.3s, color 0.3s;
+    }
+
+    .nav-buttons a:hover {
+      background-color: #a3c4f9;
+      color: #0a0a0a;
+      transform: scale(1.05);
+    }
+
+    /* Binary Pulse Grid Background */
+    .grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(20px, 1fr));
+      grid-auto-rows: 20px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .bit {
+      color: #a3c4f9;
+      opacity: 0.05;
+      animation: flicker 2s infinite;
+      text-align: center;
+      font-size: 1em;
+      font-family: monospace;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 0.05; }
+      50% { opacity: 0.15; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid" id="grid"></div>
+
+  <h1>Fusion of Cryptographic Paradigms</h1>
+  <img src="https://bgpm.davchennai.org/static/img/emblem.png" alt="D.A.V. School Logo" class="logo">
+  <div class="nav-buttons">
+    <a href="hecc.html">Hyperelliptic Curve Visualizer</a>
+    <a href="ecc.html">ECC Basics Visualizer</a>
+    <a href="paa.html">Point Addition Visualizer</a>
+  </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const cols = Math.floor(window.innerWidth / 20);
+    const rows = Math.floor(window.innerHeight / 20);
+    const total = cols * rows;
+
+    for (let i = 0; i < total; i++) {
+      const bit = document.createElement('div');
+      bit.className = 'bit';
+      bit.textContent = Math.random() > 0.5 ? '1' : '0';
+      bit.style.animationDuration = (Math.random() * 2 + 1) + 's';
+      grid.appendChild(bit);
+    }
+  </script>
+</body>
+</html>

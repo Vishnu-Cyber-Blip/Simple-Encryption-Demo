@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>ECC Visualizer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      background-color: #000;
+      color: #00bfff;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 360px;
+      padding: 30px 20px;
+      background-color: #0a0a0a;
+      overflow-y: auto;
+      font-size: 18px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      border-bottom: 2px solid #00bfff66;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    canvas {
+      flex-grow: 1;
+      background-image:
+        linear-gradient(#222 1px, transparent 1px),
+        linear-gradient(90deg, #222 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-position: center;
+    }
+
+    code {
+      background-color: #001f33;
+      color: #00ffff;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    button.toggle-button {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background-color: #00bfff;
+      color: #000;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background-color: #00bfff66;
+      border-radius: 5px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background-color: #111;
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111;
+      border: 1px solid #00bfff66;
+      padding: 15px 25px;
+      border-radius: 12px;
+      color: #00bfff;
+      display: none;
+      flex-direction: row;
+      gap: 20px;
+      z-index: 10;
+      align-items: center;
+    }
+
+
+    .controls label {
+      font-size: 14px;
+    }
+
+    .controls input[type="range"] {
+      width: 200px;
+    }
+
+    button#toggleInteract {
+      position: absolute;
+      bottom: 60px;
+      left: 20px;
+      background-color: #00bfff;
+      color: #000;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 10;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" style="
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #00bfff;
+    color: black;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-family: sans-serif;
+    font-size: 16px;
+    text-decoration: none;
+    z-index: 9999;
+  ">⬅ Back</a>
+
+  <div class="sidebar">
+    <div class="title">ECC Basics</div>
+    <div>🔑 ECC is based on <code>y² = x³ + ax + b</code> over finite fields.</div>
+    <div>📌 Smaller keys, strong security — 256-bit ECC ≈ 3072-bit RSA.</div>
+    <div>🔐 Used in web encryption, secure messaging, and crypto wallets.</div>
+    <div>🧠 Point addition is core: combining points to generate new ones!</div>
+    <div>⚡ Efficient on mobile devices due to low power needs.</div>
+  </div>
+
+  <canvas id="curveCanvas"></canvas>
+
+  <div class="sidebar">
+    <div class="title">Point Addition</div>
+    <div>📌 P + Q = R is visualized by a line intersecting the curve.</div>
+    <div>🔁 The third intersection point is reflected across the x-axis to get R.</div>
+    <div>📍 Cyan dot represents the result. Dashed line marks its vertical projection downward.</div>
+    <div>🧩 Used in ECDH (key exchange) and ECDSA (signatures).</div>
+  </div>
+
+  <button class="toggle-button" id="toggleAddition">Point Addition</button>
+
+  <button id="toggleInteract">🔧 Interaction</button>
+  <div class="controls" id="controls">
+    <label>a: <input type="range" min="-5" max="5" step="0.01" value="1" id="sliderA"></label>
+    <label>b: <input type="range" min="-5" max="5" step="0.01" value="1" id="sliderB"></label>
+    <label>Zoom: <input type="range" min="20" max="200" step="1" value="40" id="zoomSlider"></label>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("curveCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let width, height;
+    function resize() {
+      width = canvas.width = window.innerWidth - 720;
+      height = canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+
+    let a = 1, b = 1;
+    let da = 0.005, db = -0.006;
+    let showAddition = false;
+    let interactive = false;
+    let scale = 40;
+
+    const toggleAdditionBtn = document.getElementById("toggleAddition");
+    const toggleInteractBtn = document.getElementById("toggleInteract");
+    const controlsDiv = document.getElementById("controls");
+    const sliderA = document.getElementById("sliderA");
+    const sliderB = document.getElementById("sliderB");
+    const zoomSlider = document.getElementById("zoomSlider");
+
+    toggleAdditionBtn.addEventListener("click", () => {
+      showAddition = !showAddition;
+    });
+
+    toggleInteractBtn.addEventListener("click", () => {
+      interactive = !interactive;
+      controlsDiv.style.display = interactive ? "flex" : "none";
+    });
+
+    sliderA.addEventListener("input", () => {
+      a = parseFloat(sliderA.value);
+    });
+
+    sliderB.addEventListener("input", () => {
+      b = parseFloat(sliderB.value);
+    });
+
+    zoomSlider.addEventListener("input", () => {
+      scale = parseFloat(zoomSlider.value);
+    });
+
+    function drawCurve(a, b) {
+      ctx.clearRect(0, 0, width, height);
+      const cx = width / 2;
+      const cy = height / 2;
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#00FFFF';
+      for (let x = -10; x <= 10; x += 0.02) {
+        let y2 = x ** 3 + a * x + b;
+        if (y2 >= 0) {
+          let y = Math.sqrt(y2);
+          let px = cx + x * scale;
+          let py1 = cy - y * scale;
+          let py2 = cy + y * scale;
+          ctx.moveTo(px, py1);
+          ctx.arc(px, py1, 1.5, 0, 2 * Math.PI);
+          ctx.moveTo(px, py2);
+          ctx.arc(px, py2, 1.5, 0, 2 * Math.PI);
+        }
+      }
+      ctx.stroke();
+
+      if (showAddition) drawPointAddition(a, b, cx, cy, scale);
+    }
+
+    function drawPointAddition(a, b, cx, cy, scale) {
+      const x1 = -3, x2 = 2;
+      const y1 = Math.sqrt(x1 ** 3 + a * x1 + b);
+      const y2 = Math.sqrt(x2 ** 3 + a * x2 + b);
+
+      const px1 = cx + x1 * scale;
+      const py1 = cy - y1 * scale;
+      const px2 = cx + x2 * scale;
+      const py2 = cy - y2 * scale;
+
+      ctx.fillStyle = "#FFD700";
+      ctx.beginPath();
+      ctx.arc(px1, py1, 5, 0, 2 * Math.PI);
+      ctx.arc(px2, py2, 5, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(px1, py1);
+      ctx.lineTo(px2, py2);
+      ctx.strokeStyle = "#F0F";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const m = (y2 - y1) / (x2 - x1);
+      const x3 = m ** 2 - x1 - x2;
+      const y3 = m * (x1 - x3) - y1;
+
+      const px3 = cx + x3 * scale;
+      const py3 = cy + y3 * scale;
+
+      ctx.fillStyle = "#00FFFF";
+      ctx.beginPath();
+      ctx.arc(px3, py3, 5, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(px3, py3);
+      ctx.lineTo(px3, cy - y3 * scale);
+      ctx.strokeStyle = "#888";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(px3, py3);
+      ctx.lineTo(px3, cy + 10 * scale);
+      ctx.strokeStyle = "#555";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function animate() {
+      if (!interactive) {
+        a += da;
+        b += db;
+        if (a > 5 || a < -5) da *= -1;
+        if (b > 5 || b < -5) db *= -1;
+        sliderA.value = a.toFixed(2);
+        sliderB.value = b.toFixed(2);
+      }
+      drawCurve(a, b);
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+
+</html>

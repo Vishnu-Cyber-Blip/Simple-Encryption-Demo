@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Encryption Algorithm Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background-color: #0a0a0a;
+      color: #a3c4f9;
+      font-family: 'Poppins', Arial, sans-serif;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 25px;
+    }
+    h1 { font-size: 2.5em; margin-bottom: 10px; }
+    label { font-weight: bold; margin-bottom: 8px; display: block; }
+    textarea, input {
+      background-color: #000;
+      color: white;
+      border: 2px solid #a3c4f9;
+      border-radius: 6px;
+      font-size: 1.1em;
+      padding: 10px;
+      width: 100%;
+      max-width: 700px;
+      box-sizing: border-box;
+      resize: none;
+    }
+    .output-box {
+      background-color: #111;
+      color: #a3c4f9;
+      border: 2px solid #a3c4f9;
+      border-radius: 6px;
+      padding: 15px;
+      width: 100%;
+      max-width: 700px;
+      min-height: 80px;
+      font-size: 1.1em;
+      word-break: break-word;
+      overflow-x: auto;
+    }
+    .key-box {
+      background-color: #111;
+      border: 2px solid #a3c4f9;
+      border-radius: 6px;
+      padding: 20px;
+      width: 100%;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .key-item { display: flex; flex-direction: column; gap: 4px; }
+    button {
+      background-color: transparent;
+      color: #a3c4f9;
+      border: 2px solid #a3c4f9;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    button:hover { background-color: #a3c4f9; color: #0a0a0a; }
+    .mode-toggle {
+      background-color: #222;
+      border: 2px solid #a3c4f9;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html" style="
+    position: fixed; bottom: 10px; right: 10px;
+    background: #00bfff; color: black;
+    padding: 10px 18px; border-radius: 6px;
+    font-family: sans-serif; font-size: 16px;
+    text-decoration: none; z-index: 9999;
+  ">⬅ Back</a>
+
+  <h1>Encryption Algorithm Demo</h1>
+
+  <!-- Mode Toggle -->
+  <button class="mode-toggle" onclick="toggleMode()">Switch to Real Mode</button>
+
+  <!-- Input -->
+  <div>
+    <label for="plainText">Enter Message to Encrypt:</label>
+    <textarea id="plainText" rows="3" placeholder="Type your message here..."></textarea>
+  </div>
+
+  <!-- Output -->
+  <div>
+    <label>Decrypted Message:</label>
+    <div id="decryptedOutput" class="output-box"></div>
+  </div>
+
+  <!-- Keys and Encryption Details -->
+  <div class="key-box">
+    <div class="key-item">
+      <strong>Public Key:</strong>
+      <div id="publicKey" class="output-box"></div>
+    </div>
+    <div class="key-item">
+      <strong>Private Key:</strong>
+      <div id="privateKey" class="output-box"></div>
+    </div>
+    <div class="key-item">
+      <strong>Vector Encrypted Message:</strong>
+      <div id="vectorEncrypted" class="output-box"></div>
+    </div>
+    <div class="key-item">
+      <strong>Display Encrypted Message:</strong>
+      <div id="displayEncrypted" class="output-box"></div>
+    </div>
+  </div>
+
+  <!-- Example Buttons -->
+  <div>
+    <button onclick="encrypt()">Encrypt</button>
+    <button onclick="decrypt()">Decrypt</button>
+  </div>
+
+  <script>
+    let demoMode = true;
+
+    function toggleMode() {
+      demoMode = !demoMode;
+      document.querySelector(".mode-toggle").textContent =
+        demoMode ? "Switch to Real Mode" : "Switch to Demo Mode";
+    }
+
+    async function encrypt() {
+      const message = document.getElementById('plainText').value;
+      const res = await fetch('/encrypt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, demoMode })
+      });
+      const data = await res.json();
+
+      document.getElementById('publicKey').textContent = data.public_key;
+      document.getElementById('privateKey').textContent = data.private_key;
+      document.getElementById('vectorEncrypted').textContent = data.vector_encrypted;
+      document.getElementById('displayEncrypted').textContent = data.display_encrypted;
+
+      // Store for decryption
+      window.encData = data;
+      document.getElementById('decryptedOutput').textContent = "";
+    }
+
+    async function decrypt() {
+      if (!window.encData) return;
+      const res = await fetch('/decrypt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(window.encData)
+      });
+      const data = await res.json();
+      document.getElementById('decryptedOutput').textContent = data.decrypted_message;
+    }
+  </script>
+</body>
+</html>

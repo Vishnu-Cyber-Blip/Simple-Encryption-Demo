@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hyperelliptic Curve Visualizer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      background-color: #000;
+      color: #00bfff;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 360px;
+      padding: 30px 20px;
+      background-color: #0a0a0a;
+      overflow-y: auto;
+      font-size: 18px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      border-bottom: 2px solid #00bfff66;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    canvas {
+      flex-grow: 1;
+      background-image:
+        linear-gradient(#222 1px, transparent 1px),
+        linear-gradient(90deg, #222 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-position: center;
+    }
+
+    code {
+      background-color: #001f33;
+      color: #00ffff;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    button, input[type=range] {
+      margin-top: 10px;
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background-color: rgba(0, 0, 0, 0.6);
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      color: #0ff;
+      width: 240px;
+    }
+
+    label {
+      font-size: 16px;
+    }
+
+    input[type=range] {
+      width: 100%;
+    }
+
+    button {
+      background-color: #00bfff;
+      color: #000;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html" style="
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #00bfff;
+    color: black;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-family: sans-serif;
+    font-size: 16px;
+    text-decoration: none;
+    z-index: 9999;
+  ">⬅ Back</a>
+  <div class="sidebar">
+    <div class="title">Hyperelliptic Curve</div>
+    <div>📘 Equation: <code>y² = x⁵ + ax⁴ + bx³ + cx² + dx + e</code></div>
+    <div>🔬 Generalization of elliptic curves with higher degree polynomial</div>
+    <div>🛡️ Appears in hyperelliptic curve cryptography (HECC)</div>
+    <div>🎢 This animation shows real-time morphing of the curve by changing coefficients</div>
+    <div>🧪 You can toggle interaction to adjust <code>a, b, c</code> manually</div>
+    <div>🔍 Use zoom to explore different regions of the curve</div>
+  </div>
+
+  <canvas id="curveCanvas"></canvas>
+
+  <div class="controls">
+    <button id="toggleInteraction">Switch to Interaction</button>
+
+    <div id="sliders" style="display: none;">
+      <div class="slider-group">
+        <label>a: <span id="aval">0.1</span></label>
+        <input type="range" id="a" min="-5" max="5" step="0.01" value="0.1">
+      </div>
+      <div class="slider-group">
+        <label>b: <span id="bval">0.2</span></label>
+        <input type="range" id="b" min="-5" max="5" step="0.01" value="0.2">
+      </div>
+      <div class="slider-group">
+        <label>c: <span id="cval">0.3</span></label>
+        <input type="range" id="c" min="-5" max="5" step="0.01" value="0.3">
+      </div>
+    </div>
+
+    <div>
+      <button id="zoomIn">Zoom In</button>
+      <button id="zoomOut">Zoom Out</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("curveCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let width, height;
+    function resize() {
+      width = canvas.width = window.innerWidth - 360;
+      height = canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+
+    let scale = 30;
+    let a = 0.1, b = 0.2, c = 0.3, d = 0.4, e = 1;
+    let da = 0.001, db = -0.002, dc = 0.0015;
+    let useAnimation = true;
+
+    const aSlider = document.getElementById("a");
+    const bSlider = document.getElementById("b");
+    const cSlider = document.getElementById("c");
+
+    aSlider.oninput = () => { a = parseFloat(aSlider.value); document.getElementById("aval").innerText = a; };
+    bSlider.oninput = () => { b = parseFloat(bSlider.value); document.getElementById("bval").innerText = b; };
+    cSlider.oninput = () => { c = parseFloat(cSlider.value); document.getElementById("cval").innerText = c; };
+
+    document.getElementById("toggleInteraction").onclick = () => {
+      useAnimation = !useAnimation;
+      document.getElementById("toggleInteraction").innerText = useAnimation ? "Switch to Interaction" : "Switch to Animation";
+      document.getElementById("sliders").style.display = useAnimation ? "none" : "block";
+    };
+
+    document.getElementById("zoomIn").onclick = () => { scale *= 1.2; draw(); };
+    document.getElementById("zoomOut").onclick = () => { scale /= 1.2; draw(); };
+
+    function f(x) {
+      return x ** 5 + a * x ** 3 + b * x + c;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      const cx = width / 2;
+      const cy = height / 2;
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#00FFFF";
+      for (let x = -10; x <= 10; x += 0.02) {
+        let y2 = f(x);
+        if (y2 >= 0) {
+          let y = Math.sqrt(y2);
+          let px = cx + x * scale;
+          let py1 = cy - y * scale;
+          let py2 = cy + y * scale;
+          ctx.moveTo(px, py1);
+          ctx.arc(px, py1, 1.4, 0, 2 * Math.PI);
+          ctx.moveTo(px, py2);
+          ctx.arc(px, py2, 1.4, 0, 2 * Math.PI);
+        }
+      }
+      ctx.stroke();
+    }
+
+    function animate() {
+      if (useAnimation) {
+        a += da;
+        b += db;
+        c += dc;
+        if (a > 1 || a < -1) da *= -1;
+        if (b > 1 || b < -1) db *= -1;
+        if (c > 1 || c < -1) dc *= -1;
+
+        aSlider.value = a.toFixed(3);
+        bSlider.value = b.toFixed(3);
+        cSlider.value = c.toFixed(3);
+        document.getElementById("aval").innerText = aSlider.value;
+        document.getElementById("bval").innerText = bSlider.value;
+        document.getElementById("cval").innerText = cSlider.value;
+      }
+      draw();
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
